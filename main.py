@@ -122,8 +122,8 @@ async def handle_link(update: Update, context: CallbackContext) -> None:
         # User sent a link
         original_link = update.message.text
         parsed_link = urllib.parse.quote(original_link, safe='')
-        modified_link = f"https://teraboxstreamer.blogspot.com/?q={parsed_link}&m=0"
-        modified_url = f"https://teraboxstreamer.blogspot.com/2025/01/terabox-streamer.html?q={parsed_link}"
+        modified_link = f"https://terabox-player-one.vercel.app/?url=https://www.terabox.tech/play.html?url={parsed_link}"
+        modified_url = f"https://terabox-player-one.vercel.app/?url=https://www.terabox.tech/play.html?url={parsed_link}"
 
         # Create a button with the modified link
         button = [
