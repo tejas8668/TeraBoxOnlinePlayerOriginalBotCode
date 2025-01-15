@@ -177,7 +177,7 @@ async def handle_link(update: Update, context: CallbackContext) -> None:
         modified_url = f"https://terabox-player-one.vercel.app/?url=https://www.terabox.tech/play.html?url={parsed_link}"
         link_parts = original_link.split('/')
         link_id = link_parts[-1]
-        sharelink = f"https://t.me/share/url?url=https://t.me/MMPostEditorBot?start=terabox-{link_id}"
+        sharelink = f"https://t.me/share/url?url=https://t.me/TeraBox_OnlineBot?start=terabox-{link_id}"
 
         # Create a button with the modified link
         button = [
@@ -362,7 +362,7 @@ async def handle_terabox_link(update: Update, context: CallbackContext) -> None:
         linkb = f"https://terafileshare.com/s/{link_text}"
         slink = f"https://terabox-player-one.vercel.app/?url=https://www.terabox.tech/play.html?url={link}"
         slinkb = f"https://terabox-player-one.vercel.app/?url=https://www.terabox.tech/play.html?url={linkb}"
-        share = f"https://t.me/share/url?url=https://t.me/MMPostEditorBot?start=terabox-{link_text}"
+        share = f"https://t.me/share/url?url=https://t.me/TeraBox_OnlineBot?start=terabox-{link_text}"
 
         button = [
             [InlineKeyboardButton("🌐Stream Server 1🌐", url=slink)],
