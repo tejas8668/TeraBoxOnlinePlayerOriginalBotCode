@@ -81,10 +81,13 @@ async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_photo(
         photo=photo_url,
         caption=(
-            "👋 **ℍ𝕖𝕝𝕝𝕠 𝔻𝕖𝕒𝕣!**\n\n"
-            "SEND ME ANY TERABOX LINK, I WILL SEND YOU DIRECT STREAM LINK WITHOUT TERABOX LOGIN OR ANY ADS​\n\n"
-            "**𝐈𝐦𝐩𝐨𝐫𝐭𝐚𝐧𝐭​​**\n\n"
-            "𝗨𝘀𝗲 𝗖𝗵𝗿𝗼𝗺𝗲 𝗙𝗼𝗿 𝗔𝗰𝗰𝗲𝘀𝘀 𝗠𝘆 𝗔𝗹𝗹 𝗳𝗲𝗮𝘁𝘂𝗿𝗲𝘀"
+            "👋 **Welcome to the TeraBox Online Player!** 🌟\n\n"
+        "Hello, dear user! I'm here to make your experience seamless and enjoyable.\n\n"
+        "✨ **What can I do for you?**\n"
+        "- Send me any TeraBox link, and I'll provide you with a direct streaming link without any ads!\n"
+        "- Enjoy uninterrupted access for 24 hours with a simple verification process.\n\n"
+        "🔑 **Ready to get started?** Just type your TeraBox link below, and let’s dive in!\n\n"
+        "Thank you for choosing TeraBox Online Player! ❤️"
         ),
         parse_mode='Markdown'
     )
