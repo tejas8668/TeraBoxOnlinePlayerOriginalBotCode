@@ -29,9 +29,6 @@ logger = logging.getLogger(__name__)
 TOKEN = os.getenv('BOT_TOKEN')
 CHANNEL_ID = os.getenv('CHANNEL_ID')
 
-# In-memory storage for user tracking
-users = set()
-
 # Define the /start command handler
 async def start(update: Update, context: CallbackContext) -> None:
     logger.info("Received /start command")
@@ -39,6 +36,10 @@ async def start(update: Update, context: CallbackContext) -> None:
 
     # Check if the start command includes a token (for verification)
     if context.args:
+        text = update.message.text
+        if text.startswith("/start terabox-"):
+            await handle_terabox_link(update, context)
+            return
         token = context.args[0]
         user_data = users_collection.find_one({"user_id": user.id, "token": token})
 
@@ -62,8 +63,12 @@ async def start(update: Update, context: CallbackContext) -> None:
             )
         return
 
-    # If no token, send the welcome message
-    users.add(user.id)  # Add user to the in-memory set
+    # If no token, send the welcome message and store user ID in MongoDB
+    users_collection.update_one(
+        {"user_id": user.id},
+        {"$set": {"username": user.username, "full_name": user.full_name}},
+        upsert=True
+    )
     message = (
         f"New user started the bot:\n"
         f"Name: {user.full_name}\n"
@@ -71,8 +76,10 @@ async def start(update: Update, context: CallbackContext) -> None:
         f"User   ID: {user.id}"
     )
     await context.bot.send_message(chat_id=CHANNEL_ID, text=message)
+    # Corrected photo URL
+    photo_url = 'https://ik.imagekit.io/dvnhxw9vq/unnamed.png?updatedAt=1735280750258'
     await update.message.reply_photo(
-        photo='https://ik.imagekit.io/dvnhxw9vq/unnamed.png?updatedAt=1735280750258',  # Replace with your image URL
+        photo=photo_url,
         caption=(
             "👋 **ℍ𝕖𝕝𝕝𝕠 𝔻𝕖𝕒𝕣!**\n\n"
             "SEND ME ANY TERABOX LINK, I WILL SEND YOU DIRECT STREAM LINK WITHOUT TERABOX LOGIN OR ANY ADS​\n\n"
@@ -85,8 +92,49 @@ async def start(update: Update, context: CallbackContext) -> None:
 # Define the /users command handler
 async def users_count(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id in admin_ids:
-        user_count = len(users)
+        # Count the number of users in the MongoDB collection
+        user_count = users_collection.count_documents({})
         await update.message.reply_text(f"Total users who have interacted with the bot: {user_count}")
+    else:
+        await update.message.reply_text("You Have No Rights To Use My Commands")
+
+async def stats(update: Update, context: CallbackContext) -> None:
+    if update.effective_user.id in admin_ids:
+        try:
+            # Get total users
+            total_users = users_collection.count_documents({})
+
+            # Get MongoDB database stats
+            db_stats = db.command("dbstats")
+
+            # Calculate used storage
+            used_storage_mb = db_stats['dataSize'] / (1024 ** 2)  # Convert bytes to MB
+
+            # Calculate total and free storage (if available)
+            if 'fsTotalSize' in db_stats:
+                total_storage_mb = db_stats['fsTotalSize'] / (1024 ** 2)  # Convert bytes to MB
+                free_storage_mb = total_storage_mb - used_storage_mb
+            else:
+                total_storage_in_mb = 512
+
+                # Calculate free storage
+                free_storage_in_mb = total_storage_in_mb - used_storage_mb
+                # Fallback for environments where fsTotalSize is not available
+                total_storage_mb = "N/A"
+                free_storage_mb = free_storage_in_mb
+
+            # Prepare the response message
+            message = (
+                f"📊 **Bot Statistics**\n\n"
+                f"👥 **Total Users:** {total_users}\n"
+                f"💾 **MongoDB Used Storage:** {used_storage_mb:.2f} MB\n"
+                f"🆓 **MongoDB Free Storage:** {free_storage_mb if isinstance(free_storage_mb, str) else f'{free_storage_mb:.2f} MB'}\n"
+            )
+
+            await update.message.reply_text(message, parse_mode='Markdown')
+        except Exception as e:
+            logger.error(f"Error fetching stats: {e}")
+            await update.message.reply_text("❌ An error occurred while fetching stats.")
     else:
         await update.message.reply_text("You Have No Rights To Use My Commands")
 
@@ -124,11 +172,15 @@ async def handle_link(update: Update, context: CallbackContext) -> None:
         parsed_link = urllib.parse.quote(original_link, safe='')
         modified_link = f"https://terabox-player-one.vercel.app/?url=https://www.terabox.tech/play.html?url={parsed_link}"
         modified_url = f"https://terabox-player-one.vercel.app/?url=https://www.terabox.tech/play.html?url={parsed_link}"
+        link_parts = original_link.split('/')
+        link_id = link_parts[-1]
+        sharelink = f"https://t.me/share/url?url=https://t.me/MMPostEditorBot?start=terabox-{link_id}"
 
         # Create a button with the modified link
         button = [
-            [InlineKeyboardButton("Stream Server 1", url=modified_link)],
-            [InlineKeyboardButton("Stream Server 2", url=modified_url)]
+            [InlineKeyboardButton("🌐Stream Server 1🌐", url=modified_link)],
+            [InlineKeyboardButton("🌐Stream Server 2🌐", url=modified_url)],
+            [InlineKeyboardButton("◀Share▶", url=sharelink)]
         ]
         reply_markup = InlineKeyboardMarkup(button)
 
@@ -156,12 +208,15 @@ async def broadcast(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id in admin_ids:
         message = update.message.reply_to_message
         if message:
-            total_users = len(users)
+            # Fetch all user IDs from MongoDB
+            all_users = users_collection.find({}, {"user_id": 1})
+            total_users = users_collection.count_documents({})
             sent_count = 0
             block_count = 0
             fail_count = 0
 
-            for user_id in users:
+            for user_data in all_users:
+                user_id = user_data['user_id']
                 try:
                     if message.photo:
                         await context.bot.send_photo(chat_id=user_id, photo=message.photo[-1].file_id, caption=message.caption)
@@ -227,10 +282,102 @@ def shorten_url_link(url):
     logger.error(f"Failed to shorten URL with Adrinolinks: {url}")
     return url
 
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+
+# Define the /userss command handler
+async def userss(update: Update, context: CallbackContext) -> None:
+    if update.effective_user.id in admin_ids:
+        # Fetch the first 100 users
+        users = list(users_collection.find({}, {"full_name": 1, "username": 1}).limit(100))
+
+        if not users:
+            await update.message.reply_text("No users found in the database.")
+            return
+
+        # Prepare the message with user details
+        message = ""
+        for i, user in enumerate(users):
+            name = user.get("full_name", "N/A")
+            username = user.get("username", "N/A")
+            message += f"<b>Name:</b> {name}\n"
+            message += f"<b>Username:</b> @{username}\n\n"
+
+            # Send the message in chunks of 5 users
+            if (i + 1) % 5 == 0:
+                await update.message.reply_text(message, parse_mode='HTML')
+                message = ""
+
+        # Send the remaining users
+        if message:
+            await update.message.reply_text(message, parse_mode='HTML')
+
+        # Display the "Next" button
+        keyboard = [[InlineKeyboardButton("Next", callback_data="next_users")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("Click 'Next' to view more users", reply_markup=reply_markup)
+    else:
+        await update.message.reply_text("You Have No Rights To Use My Commands")
+
+async def next_users(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    await query.answer()
+
+    # Fetch the next 100 users
+    users = list(users_collection.find({}, {"full_name": 1, "username": 1}).skip(100).limit(100))
+
+    if not users:
+        await query.edit_message_text("No more users found in the database.")
+        return
+
+    # Prepare the message with user details
+    message = ""
+    for i, user in enumerate(users):
+        name = user.get("full_name", "N/A")
+        username = user.get("username", "N/A")
+        message += f"<b>Name:</b> {name}\n"
+        message += f"<b>Username:</b> @{username}\n\n"
+
+        # Send the message in chunks of 5 users
+        if (i + 1) % 5 == 0:
+            await query.edit_message_text(message, parse_mode='HTML')
+            message = ""
+
+    # Send the remaining users
+    if message:
+        await query.edit_message_text(message, parse_mode='HTML')
+
+    # Display the "Next" button
+    keyboard = [[InlineKeyboardButton("Next", callback_data="next_users")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text("Click 'Next' to view more users", reply_markup=reply_markup)
+    
+async def handle_terabox_link(update: Update, context: CallbackContext) -> None:
+    text = update.message.text
+    if text.startswith("/start terabox-"):
+        link_text = text.replace("/start terabox-", "")
+        link = f"https://terabox.com/s/{link_text}"
+        linkb = f"https://terafileshare.com/s/{link_text}"
+        slink = f"https://terabox-player-one.vercel.app/?url=https://www.terabox.tech/play.html?url={link}"
+        slinkb = f"https://terabox-player-one.vercel.app/?url=https://www.terabox.tech/play.html?url={linkb}"
+        share = f"https://t.me/share/url?url=https://t.me/MMPostEditorBot?start=terabox-{link_text}"
+
+        button = [
+            [InlineKeyboardButton("🌐Stream Server 1🌐", url=slink)],
+            [InlineKeyboardButton("🌐Stream Server 2🌐", url=slinkb)],
+            [InlineKeyboardButton("◀Share▶", url=share)]
+        ]
+        reply_markup = InlineKeyboardMarkup(button)
+
+        await update.message.reply_text(
+            f"👇👇 YOUR VIDEO LINK IS READY, USE THESE SERVERS 👇👇\n\n♥ 👇Your Stream Link👇 ♥\n",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+        
 def main() -> None:
     # Get the port from the environment variable or use default
     port = int(os.environ.get('PORT', 8080))  # Default to port 8080
-    webhook_url = f"https://total-jessalyn-toxiccdeveloperr-36046375.koyeb.app/{TOKEN}"  # Replace with your server URL
+    webhook_url = f"https://accurate-cordula-imdb07-87daeb39.koyeb.app/{TOKEN}"  # Replace with your server URL
 
     # Create the Application and pass it your bot's token
     app = ApplicationBuilder().token(TOKEN).build()
@@ -239,7 +386,13 @@ def main() -> None:
     app.add_handler(CommandHandler("start", start))
 
     # Register the /users command handler
-    app.add_handler(CommandHandler("users", users_count))
+    app.add_handler(CommandHandler("totalusers", users_count))
+
+    # Register the /userss command handler
+    app.add_handler(CommandHandler("users", userss))
+
+    # Register the /stats command handler
+    app.add_handler(CommandHandler("stats", stats))
 
     # Register the link handler
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_link))
