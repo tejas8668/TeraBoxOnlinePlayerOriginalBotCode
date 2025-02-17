@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import requests
 
 # Add this at the top of the file
-VERIFICATION_REQUIRED = os.getenv('VERIFICATION_REQUIRED', 'false').lower() == 'true'
+VERIFICATION_REQUIRED = os.getenv('VERIFICATION_REQUIRED', 'true').lower() == 'true'
 
 admin_ids = [6025969005, 6018060368]
 
@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 # Get the bot token and channel ID from environment variables
 TOKEN = os.getenv('BOT_TOKEN')
 CHANNEL_ID = os.getenv('CHANNEL_ID')
+WEBHOOK = os.getenv('WEBHOOK')
 
 # Define the /start command handler
 async def start(update: Update, context: CallbackContext) -> None:
@@ -380,7 +381,7 @@ async def handle_terabox_link(update: Update, context: CallbackContext) -> None:
 def main() -> None:
     # Get the port from the environment variable or use default
     port = int(os.environ.get('PORT', 8080))  # Default to port 8080
-    webhook_url = f"https://accurate-cordula-imdb07-87daeb39.koyeb.app/{TOKEN}"  # Replace with your server URL
+    webhook_url = f"{WEBHOOK}{TOKEN}"  # Replace with your server URL
 
     # Create the Application and pass it your bot's token
     app = ApplicationBuilder().token(TOKEN).build()
