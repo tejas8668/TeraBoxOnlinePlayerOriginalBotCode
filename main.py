@@ -270,8 +270,8 @@ async def get_token(user_id: int, bot_username: str) -> str:
     return shortened_link
 
 def shorten_url_link(url):
-    api_url = 'https://arolinks.com/api'
-    api_key = '90bcb2590cca0a2b438a66e178f5e90fea2dc8b4'
+    api_url = 'https://adrinolinks.in/api'
+    api_key = '599ee2c148d46fe9061578db049f3cd32f528bf6'
     params = {
         'api': api_key,
         'url': url
