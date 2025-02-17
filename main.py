@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import requests
 
 # Add this at the top of the file
-VERIFICATION_REQUIRED = os.getenv('VERIFICATION_REQUIRED', 'faslse').lower() == 'true'
+VERIFICATION_REQUIRED = os.getenv('VERIFICATION_REQUIRED', 'false').lower() == 'true'
 
 admin_ids = [6025969005, 6018060368]
 
@@ -269,8 +269,8 @@ async def get_token(user_id: int, bot_username: str) -> str:
     return shortened_link
 
 def shorten_url_link(url):
-    api_url = 'https://gplinks.comapi'
-    api_key = '89e6e36b347f3db3f187dda37290c5927e99c18a'
+    api_url = 'https://arolinks.com/api'
+    api_key = '90bcb2590cca0a2b438a66e178f5e90fea2dc8b4'
     params = {
         'api': api_key,
         'url': url
@@ -356,32 +356,6 @@ async def next_users(update: Update, context: CallbackContext) -> None:
     
 async def handle_terabox_link(update: Update, context: CallbackContext) -> None:
     text = update.message.text
-    user = update.effective_user
-    # Check if user is admin
-    if user.id in admin_ids:
-        # Admin ko verify karne ki zaroorat na ho
-        pass
-    else:
-        # User ko verify karne ki zaroorat hai
-        if VERIFICATION_REQUIRED and not await check_verification(user.id):
-            # User ko verify karne ki zaroorat hai
-            btn = [
-                [InlineKeyboardButton("Verify", url=await get_token(user.id, context.bot.username))],
-                [InlineKeyboardButton("How To Open Link & Verify", url="https://t.me/how_to_download_0011")]
-            ]
-            await update.message.reply_text(
-                text="🚨 <b>Token Expired!</b>\n\n"
-                     "<b>Timeout: 24 hours</b>\n\n"
-                     "Your access token has expired. Verify it to continue using the bot!\n\n"
-                     "<b>🔑 Why Tokens?</b>\n\n"
-                     "Tokens unlock premium features with a quick ad process. Enjoy 24 hours of uninterrupted access! 🌟\n\n"
-                     "<b>👉 Tap below to verify your token.</b>\n\n"
-                     "Thank you for your support! ❤️",
-                parse_mode='HTML',
-                reply_markup=InlineKeyboardMarkup(btn)
-            )
-            return
-            
     if text.startswith("/start terabox-"):
         link_text = text.replace("/start terabox-", "")
         link = f"https://terabox.com/s/{link_text}"
